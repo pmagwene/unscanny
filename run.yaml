@@ -1,0 +1,5 @@
+run:
+  experiment: PHB1000
+  interval: 3
+  nscans: 2
+  user: Magwene

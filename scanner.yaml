@@ -1,0 +1,5 @@
+scanner:
+  depth: 16
+  mode: Gray
+  resolution: 300
+  source: TPU8x10
