@@ -80,4 +80,4 @@ def construct_image_name(begintime, investigator, experiment, UID,
     if timept is None:
         timept = datetime.datetime.now()
     timestr = timept.strftime("%Y%m%dT%H%M%S")
-    return "{}-{}-{}-{:04d}-{}.tif".format(basestr, ninterval, timestr)
+    return "{}-{:04d}-{}.tif".format(basestr, ninterval, timestr)
