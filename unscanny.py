@@ -124,7 +124,7 @@ class RunData(object):
         self.scanner_settings_file = None
         self.run_settings_file = None
         self.basedir = "."
-        self.ID = self.generate_id()
+        self.UID = self.generate_id()
 
     def log(self, entry):
         self._log.append(entry)

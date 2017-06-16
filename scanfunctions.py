@@ -51,13 +51,16 @@ def scan(scanner, run_data):
     fname = construct_image_name(run_data.t_start,
                                  run_data.user,
                                  run_data.experiment,
+                                 run_data.UID,
                                  run_data.ct_nextscan,
                                  t_scan)
     
     # run scan and save image
     imgarray = scanner.arr_scan()
+    beginstr = run_data.strftime("%Y-%m-%d")
     TIFF.imsave(fname, imgarray,
-                description="Run UID: {}".format(run_data.ID))
+        description="Run Date: {}; Run UID: {}".format(beginstr,
+                                                       run_data.UID))
 
     # update run variables
     run_data.t_lastscan = t_scan
