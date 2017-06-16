@@ -43,13 +43,9 @@ def fake_scan(scanner, run_data):
 
 
 def scan(scanner, run_data):
+    """Scan and save image based on run settings.
+    """
     t_scan = datetime.datetime.now()
-
-    # base directory name
-    basename = construct_base_name(run_data.t_start,
-                                   run_data.user,
-                                   run_data.experiment,
-                                   run_data.ID)
 
     # specific filename
     fname = construct_image_name(run_data.t_start,
@@ -60,7 +56,7 @@ def scan(scanner, run_data):
     
     # run scan and save image
     imgarray = scanner.arr_scan()
-    TIFF.imsave(imgarray, fname,
+    TIFF.imsave(fname, imgarray
                 description="Run UID: {}".format(run_data.ID))
 
     # update run variables
