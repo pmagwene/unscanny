@@ -32,14 +32,14 @@ def apply_scanner_settings(scanner, settings):
     return scanner
 
 
-def fake_scan(scanner, run_settings):
+def fake_scan(scanner, run_data):
     """A function for testing program logic w/out actually scanning.
     """
     t_now = datetime.datetime.now()
     print("Scanning at {}".format(t_now.ctime()))
-    run_settings.t_lastscan = t_now()
-    run_settings.ct_nextscan += 1
-    return run_settings
+    run_data.t_lastscan = t_now()
+    run_data.ct_nextscan += 1
+    return run_data
 
 
 def scan(scanner, run_data):
@@ -60,12 +60,12 @@ def scan(scanner, run_data):
     
     # run scan and save image
     imgarray = scanner.arr_scan()
-    TIFF.imsave(imgarray, fname)
+    TIFF.imsave(imgarray, fname, description="Run UID: {}".format(run.ID))
 
     # update run variables
     run_settings.t_lastscan = t_scan
     run_settings.ct_nextscan += 1
-    return run_settings
+    return run_data
 
 
 
