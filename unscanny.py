@@ -206,7 +206,7 @@ def _runit(scanner_file, run_file):
     # enter scanner loop
     run_data = curses.wrapper(run_scanner_loop,
                               scanner,
-                              scanner_settings, run_settings)
+                              run_settings)
 
 
 
