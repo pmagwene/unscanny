@@ -7,13 +7,15 @@ import curses
 
 import click                   # library for building CLIs
 import pick                    # curses library for picking from lists
+import shortid                 # library for generating short unique ids
 
 import scanfunctions
 import uncursed
 import unsettings
 import settings
 
-
+# a few global objects
+ID = shortid.ShortId()
 
 def scanner_settings_str(settings):
     s = """\
@@ -22,8 +24,7 @@ def scanner_settings_str(settings):
     Source: {}
     Mode: {}
     Resolution: {}
-    Depth: {}
-    """
+    Depth: {}"""
     s = textwrap.dedent(s)
     return s.format(settings.source, settings.mode,
                     settings.resolution, settings.depth)
@@ -36,8 +37,7 @@ def run_settings_str(settings):
     User: {}
     Experiment: {}
     Interval: {}
-    # of Scans: {}
-    """
+    # of Scans: {} """
     s = textwrap.dedent(s)
     return s.format(settings.user, settings.experiment,
                     settings.interval, settings.nscans)
@@ -59,18 +59,17 @@ def choose_scanner(testing=False):
     
     
 def run_scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
-    screen.clear()
-    screen.nodelay(1)  # make getch() non-blocking
+    screen.clear()              # clear screen
+    curses.curs_set(0)          # make cursor invisible
+    screen.nodelay(1)           # make getch() non-blocking
 
     # Setup screen
-    nrow, ncol = screen.getmaxyx()
     txt = """Scanning initiated.\n"""\
-          """Press Capital <Q> to abort."""
+          """Press Capital "Q" to abort."""
     uncursed.add_multiline_str(screen,
                                uncursed.centered_ycoord(screen, txt),
                                uncursed.centered_xcoord(screen, txt),
                                txt)
-    curses.curs_set(0)
     screen.refresh()
 
     # Run first scan 
@@ -113,9 +112,10 @@ def run_scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
                                 
         
 class RunData(object):
-    def __init__(self, run_settings):
+    def __init__(self, run_settings, scanner_settings):
         for (key,val) in run_settings.iteritems():
             self.__dict__[key] = val
+        self.scanner_settings = scanner_settings
         self.ct_nextscan = 0
         self._log = []
         self.t_start = None
@@ -123,16 +123,31 @@ class RunData(object):
         self.successful = False
         self.scanner_settings_file = None
         self.run_settings_file = None
+        self.basedir = "."
+        # generate UID without dashes
+        self.ID = ID.generate().replace("-", "")
 
     def log(self, entry):
         self._log.append(entry)
-            
 
-
-@click.command()
-@click.argument("scanner_file", type = click.Path(exists=True))
-@click.argument("run_file", type = click.Path(exists=True))
-def runit(scanner_file, run_file):
+    def generate_report(self):
+        idstr = "UID: {}".format(self.ID)
+        scanset = scanner_settings_str(self.scanner_settings)
+        runset = run_settings_str(self)
+        startstr = "Start time:"
+        if self.t_start is not None:
+            startstr = "Start time: {}".format(self.t_start.isoformat())
+        endstr = "End time:"
+        if self.t_lastscan is not None:
+            endstr = "End time: {}".format(self.t_lastscan.isoformat()) 
+        totalstr = "Total scans: {}".format(self.ct_nextscan)
+        logstr = "Log:\n\t{}".format("\n\t".join(self._log))
+        parts = [idstr, scanset, runset, startstr, endstr, totalstr, logstr]
+        reportstr = "\n\n".join(parts)
+        return reportstr
+        
+        
+def _runit(scanner_file, run_file):
     """Given scanner and run settings file, initiate scanning run.
     """
     # Load settings files
@@ -140,7 +155,7 @@ def runit(scanner_file, run_file):
     run_settings = settings.load_config(run_file, "run")
 
     # Create run data object
-    run_data = RunData(run_settings)
+    run_data = RunData(run_settings, scanner_settings)
     run_data.scanner_settings_file = scanner_file
     run_data.run_settings_file = run_file
 
@@ -161,9 +176,6 @@ def runit(scanner_file, run_file):
         click.echo("Exiting: User indicated incorrect settings.")
         run_data.log("Aborted: incorrect run/scanner settings.")
         return run_data
-
-    # Create run data object
-    run_data = RunData(run_settings)
 
     # Pick scanner from list of discovered scanners
     while True:
@@ -200,6 +212,12 @@ def runit(scanner_file, run_file):
 def cli():
     pass
 
+@click.command()
+@click.argument("scanner_file", type = click.Path(exists=True))
+@click.argument("run_file", type = click.Path(exists=True))
+def runit(scanner_file, runfile):
+    _runit(scanner_file, runfile)
+    
 cli.add_command(unsettings.setrun)
 cli.add_command(unsettings.setscanner)
 cli.add_command(runit)

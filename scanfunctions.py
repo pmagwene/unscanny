@@ -4,36 +4,33 @@ import threading
 
 import sane
 import numpy as np
-from libtiff import TIFF
+import tifffile as TIFF
 
 
 def initialize_driver():
+    """Initialize the scanner driver.
+    """
     return sane.init()
 
 def get_scanners(localOnly=True):
+    """Get list of available scanners.
+    """
     return sane.get_devices(localOnly)
 
 def open_scanner(device_name):
+    """Prepare scanner for scanning.
+    """
     return sane.open(device_name)
 
-    
 def apply_scanner_settings(scanner, settings):
+    """Apply info from Settings object to scanner object.
+    """
     scanner.mode = settings.mode
     scanner.source = settings.source
     scanner.resolution = settings.resolution
     scanner.depth = settings.depth
     return scanner
 
-def scan_at_interval(scanner, runsettings):
-    ct = 0
-    while ct < runsettings.nscans:
-        timer = threading.Timer(runsettings["interval"],
-                                scan, runsettings, ct)
-        timer.start()
-        while timer.is_alive():
-            continue
-        ct += 1
-    
 
 def fake_scan(scanner, run_settings):
     """A function for testing program logic w/out actually scanning.
@@ -45,14 +42,22 @@ def fake_scan(scanner, run_settings):
     return run_settings
 
 
-def scan(scanner, run_settings):
+def scan(scanner, run_data):
     t_scan = datetime.datetime.now()
-    fname = construct_image_name(run_settings.t_start,
-                                 run_settings.user,
-                                 run_settings.experiment,
-                                 run_settings.ct_nextscan,
-                                 t_scan)
 
+    # base directory name
+    basename = construct_base_name(run_data.t_start,
+                                   run_data.user,
+                                   run_data.experiment,
+                                   run_data.ID)
+
+    # specific filename
+    fname = construct_image_name(run_data.t_start,
+                                 run_data.user,
+                                 run_data.experiment,
+                                 run_data.ct_nextscan,
+                                 t_scan)
+    
     # run scan and save image
     imgarray = scanner.arr_scan()
     write_array_to_TIFF(imgarray, fname)
@@ -64,18 +69,21 @@ def scan(scanner, run_settings):
     
 
 
-def write_array_to_TIFF(arr, name):
-    tiff = TIFF.open(name, mode="w")
+def write_array_to_TIFF(arr, name, run_data = None):
+    tiff = TIFf.imsave(name, mode="w")
     tiff.write_image(np.squeeze(arr))
     tiff.close()
 
 
+def construct_base_name(begintime, investigator, experiment, UID):
+    beginstr = begintime.strftime("%Y-%m-%d")
+    return "{}-{}-{}-{}".format(beginstr, investigator, experiment, UID)
 
-def construct_image_name(begintime, investigator, experiment,
+
+def construct_image_name(begintime, investigator, experiment, UID,
                          ninterval, timept=None):
+    basestr = construct_base_name(begintime, investigator, experiment, UID)
     if timept is None:
         timept = datetime.datetime.now()
-    beginstr = begintime.strftime("%Y-%m-%d")
     timestr = timept.strftime("%Y%m%dT%H%M%S")
-    return "{}-{}-{}-{:04d}-{}.tif".format(beginstr, investigator, experiment,
-                                           ninterval, timestr)
+    return "{}-{}-{}-{:04d}-{}.tif".format(basestr, ninterval, timestr)
