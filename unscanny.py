@@ -5,19 +5,17 @@ import sys
 import threading
 import time, datetime
 import textwrap
+import uuid
 import curses
 
 import click                   # library for building CLIs
 import pick                    # curses library for picking from lists
-import shortid                 # library for generating short unique ids
 
 import scanfunctions
 import uncursed
 import unsettings
 import settings
 
-# a few global objects
-ID = shortid.ShortId()
 
 def scanner_settings_str(settings):
     s = """\
@@ -126,11 +124,14 @@ class RunData(object):
         self.scanner_settings_file = None
         self.run_settings_file = None
         self.basedir = "."
-        # generate UID without dashes
-        self.ID = ID.generate().replace("-", "")
+        self.ID = self.generate_id()
 
     def log(self, entry):
         self._log.append(entry)
+
+    def generate_id(self):
+        UUID = str(uuid.uuid4())
+        return UUID.split('-')[0]
 
     def generate_report(self):
         idstr = "UID: {}".format(self.ID)
