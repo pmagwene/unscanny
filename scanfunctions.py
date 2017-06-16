@@ -57,7 +57,7 @@ def scan(scanner, run_data):
     
     # run scan and save image
     imgarray = scanner.arr_scan()
-    beginstr = run_data.strftime("%Y-%m-%d")
+    beginstr = run_data.t_start.strftime("%Y-%m-%d")
     TIFF.imsave(fname, imgarray,
         description="Run Date: {}; Run UID: {}".format(beginstr,
                                                        run_data.UID))
