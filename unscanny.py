@@ -82,13 +82,13 @@ def run_scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
 
     # Update status bar
     uncursed.set_status_bar(screen,
-        "Scan {} at {}".format(run_settings.ct_nextscan - 1,
-                               run_settings.t_lastscan.ctime()))
+        "Scan {} at {}".format(run_data.ct_nextscan - 1,
+                               run_data.t_lastscan.ctime()))
 
     # Run loop for remaining scans
     while run_data.ct_nextscan < run_data.nscans:
 
-        # threading.Timer wants interval in secs, run_settings.interval in mins
+        # threading.Timer wants interval in secs, run_data.interval in mins
         timer = threading.Timer(run_data.interval * 60, 
                                 scan_func,
                                 [scanner, run_data])
