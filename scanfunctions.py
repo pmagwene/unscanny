@@ -60,11 +60,12 @@ def scan(scanner, run_data):
     
     # run scan and save image
     imgarray = scanner.arr_scan()
-    TIFF.imsave(imgarray, fname, description="Run UID: {}".format(run.ID))
+    TIFF.imsave(imgarray, fname,
+                description="Run UID: {}".format(run_data.ID))
 
     # update run variables
-    run_settings.t_lastscan = t_scan
-    run_settings.ct_nextscan += 1
+    run_data.t_lastscan = t_scan
+    run_data.ct_nextscan += 1
     return run_data
 
 
