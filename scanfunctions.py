@@ -60,19 +60,13 @@ def scan(scanner, run_data):
     
     # run scan and save image
     imgarray = scanner.arr_scan()
-    write_array_to_TIFF(imgarray, fname)
+    TIFF.imsave(imgarray, fname)
 
     # update run variables
     run_settings.t_lastscan = t_scan
     run_settings.ct_nextscan += 1
     return run_settings
-    
 
-
-def write_array_to_TIFF(arr, name, run_data = None):
-    tiff = TIFf.imsave(name, mode="w")
-    tiff.write_image(np.squeeze(arr))
-    tiff.close()
 
 
 def construct_base_name(begintime, investigator, experiment, UID):
