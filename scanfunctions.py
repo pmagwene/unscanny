@@ -56,7 +56,7 @@ def scan(scanner, run_data):
     
     # run scan and save image
     imgarray = scanner.arr_scan()
-    TIFF.imsave(fname, imgarray
+    TIFF.imsave(fname, imgarray,
                 description="Run UID: {}".format(run_data.ID))
 
     # update run variables
