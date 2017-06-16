@@ -215,8 +215,8 @@ def cli():
 @click.command()
 @click.argument("scanner_file", type = click.Path(exists=True))
 @click.argument("run_file", type = click.Path(exists=True))
-def runit(scanner_file, runfile):
-    _runit(scanner_file, runfile)
+def runit(scanner_file, run_file):
+    _runit(scanner_file, run_file)
     
 cli.add_command(unsettings.setrun)
 cli.add_command(unsettings.setscanner)
