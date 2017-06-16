@@ -70,12 +70,16 @@ def scan(scanner, run_data):
 
 
 def construct_base_name(begintime, investigator, experiment, UID):
+    """Construct base part of standardized file name.
+    """
     beginstr = begintime.strftime("%Y-%m-%d")
     return "{}-{}-{}-{}".format(beginstr, investigator, experiment, UID)
 
 
 def construct_image_name(begintime, investigator, experiment, UID,
                          ninterval, timept=None):
+    """Construct full standardized filename for image file.
+    """
     basestr = construct_base_name(begintime, investigator, experiment, UID)
     if timept is None:
         timept = datetime.datetime.now()

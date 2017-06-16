@@ -82,6 +82,7 @@ def run_scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
     uncursed.set_status_bar(screen,
         "Scan {} at {}".format(run_data.ct_nextscan - 1,
                                run_data.t_lastscan.ctime()))
+    screen.refresh()
 
     # Run loop for remaining scans
     while run_data.ct_nextscan < run_data.nscans:
@@ -99,14 +100,14 @@ def run_scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
                 timer.cancel()
                 return False
             else:
-                time.sleep(1)
-                screen.refresh()
                 continue
 
         # update status bar after each scan
         uncursed.set_status_bar(screen,
             "Scan {} at {}".format(run_data.ct_nextscan - 1,
                                    run_data.t_lastscan.ctime()))
+        screen.refresh()
+
     return True
                 
                                 
