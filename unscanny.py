@@ -57,19 +57,61 @@ def choose_scanner(testing=False):
     device_name = choice[0]
     return choice, scanfunctions.open_scanner(device_name)
     
+
+def delay_loop(screen, delay_in_mins):
+    """ A curses loop for a delay screen.
+    """
+    screen.clear()
+    curses.curs_set(0)
+    screen.nodelay(1)
+
+    txt = """Waiting to begin first scan.\n"""\
+          """Press capital "Q" to cancel wait and abort scanning run."""
+    uncursed.add_multiline_str(screen,
+            uncursed.centered_ycoord(screen, txt),
+            uncursed.centered_xcoord(screen, txt),
+            txt)
+
+    delay_in_seconds = delay_in_mins * 60
+    waitstr = str(datetime.timedelta(0, delay_in_seconds))
+    uncursed.set_status_bar(screen,
+            "Time until first scan: {}".format(waitstr))
+    screen.refresh()
+
+    # delay loop
+    while delay_in_seconds > 0:
+        time.sleep(1)
+        delay_in_seconds -= 1
+        waitstr = str(datetime.timedelta(0, delay_in_seconds))
+        uncursed.set_status_bar(screen,
+                "Time until first scan: {}".format(waitstr))
+        screen.refresh()
+        c = screen.getch()
+        if c == ord("Q"):
+            return False
+
+    return True
+    
     
 def run_scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
+    """ Generate scans at given intervals -> boolean indicating success/failure.
+
+    A useful informational display is provided in a curses window to provide
+    details on scans completed and time until next scan.
+    """
     screen.clear()              # clear screen
     curses.curs_set(0)          # make cursor invisible
     screen.nodelay(1)           # make getch() non-blocking
 
-    # Setup screen
-    txt = """Scanning initiated.\n"""\
-          """Press Capital "Q" to abort."""
+    # Setup screen dispaly
+    txt = """Collecting {} scans at {} minute intervals.\n""".format(
+        run_data.nscans, run_data.interval)
+    txt += """Press capital "Q" to abort."""
     uncursed.add_multiline_str(screen,
                                uncursed.centered_ycoord(screen, txt),
                                uncursed.centered_xcoord(screen, txt),
                                txt)
+    uncursed.set_status_bar(screen, "Running first scan...")
     screen.refresh()
 
     # Run first scan 
@@ -87,28 +129,43 @@ def run_scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
     # Run loop for remaining scans
     while run_data.ct_nextscan < run_data.nscans:
 
-        # threading.Timer wants interval in secs, run_data.interval in mins
-        timer = threading.Timer(run_data.interval * 60, 
-                                scan_func,
-                                [scanner, run_data])
-        timer.start()
+        delay_in_seconds = run_data.interval * 60
 
-        # while waiting for next scan, poll for abort key press
-        while timer.is_alive():
+        # run tasks in interval between scans
+        while delay_in_seconds > 0:
+            time.sleep(1)
+            delay_in_seconds -= 1
+
+            # update status bar
+            waitstr = str(datetime.timedelta(0, delay_in_seconds))
+            uncursed.set_status_bar(screen,
+                "Scan {} completed at {}. Next scan in {}".format(
+                    run_data.ct_nextscan - 1,
+                    run_data.t_lastscan.ctime(),
+                    waitstr))
+            screen.refresh()
+
+            # did we get the abort signal?
             c = screen.getch()
             if c == ord("Q"):
-                timer.cancel()
                 return False
-            else:
-                continue
 
-        # update status bar after each scan
-        uncursed.set_status_bar(screen,
-            "Scan {} at {}".format(run_data.ct_nextscan - 1,
-                                   run_data.t_lastscan.ctime()))
+        # interval completed, update status bar to indicate scanning has begun
+        uncursed.set_status_bar("Scanning...")
         screen.refresh()
 
-    return True
+        # carry out scan
+        scan_func(scanner, run_data)
+        
+        # scan now completed, update status bar again
+        uncursed.set_status_bar(screen,
+            "Scan {} completed at {}. Next scan in {}".format(
+            run_data.ct_nextscan - 1,
+            run_data.t_lastscan.ctime(),
+            waitstr))
+        screen.refresh()
+        
+    return True  
                 
                                 
         
@@ -125,6 +182,7 @@ class RunData(object):
         self.scanner_settings_file = None
         self.run_settings_file = None
         self.basedir = "."
+        self.succeeded = False
         self.UID = self.generate_id()
 
     def log(self, entry):
@@ -199,16 +257,31 @@ def _runit(scanner_file, run_file):
 
     # Confirm begin scanning
     if not click.confirm(
-            "\nUsing scanner at {}. Begin scanning?".format(device_info[0]),
+            "\n Are you ready to begin scanning?".format(device_info[0]),
             default = True):
         click.echo("Exiting: User exited before scanning.")
         run_data.log("Aborted: user exited before scanning")
         return run_data
 
+    # get delay time
+    init_delay = click.prompt(
+        "Delay (in minutes) before first scan (0 = start immediately)?",
+                              type = click.IntRange(0, 24*60),
+                              default = 0)
+    run_data.initial_delay = init_delay
+
+    # run delay loop
+    if init_delay > 0:
+        finished_delay = curses.wrapper(delay_loop, init_delay)
+        if not finished_delay:
+            run_data.log("Aborted: user cancelled during initial delay.")
+            return run_data
+    
+
     # enter scanner loop
-    run_data = curses.wrapper(run_scanner_loop,
-                              scanner,
-                              run_data)
+    run_data.succeeded = curses.wrapper(run_scanner_loop,
+                                        scanner, run_data)
+    return run_data
 
 
 
