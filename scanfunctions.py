@@ -45,15 +45,11 @@ def fake_scan(scanner, run_data):
 def scan(scanner, run_data):
     """Scan and save image based on run settings.
     """
+    # get current time
     t_scan = datetime.datetime.now()
-
-    # specific filename
-    fname = construct_image_name(run_data.t_start,
-                                 run_data.user,
-                                 run_data.experiment,
-                                 run_data.UID,
-                                 run_data.ct_nextscan,
-                                 t_scan)
+    
+    # get current filename, with tif extension
+    fname = run_data.current_fname(t_scan) + ".tif"
     
     # run scan and save image
     imgarray = scanner.arr_scan()
@@ -69,19 +65,3 @@ def scan(scanner, run_data):
 
 
 
-def construct_base_name(begintime, investigator, experiment, UID):
-    """Construct base part of standardized file name.
-    """
-    beginstr = begintime.strftime("%Y-%m-%d")
-    return "{}-{}-{}-{}".format(beginstr, investigator, experiment, UID)
-
-
-def construct_image_name(begintime, investigator, experiment, UID,
-                         ninterval, timept=None):
-    """Construct full standardized filename for image file.
-    """
-    basestr = construct_base_name(begintime, investigator, experiment, UID)
-    if timept is None:
-        timept = datetime.datetime.now()
-    timestr = timept.strftime("%Y%m%dT%H%M%S")
-    return "{}-{:04d}-{}.tif".format(basestr, ninterval, timestr)

@@ -19,7 +19,6 @@ class Settings(collections.MutableMapping):
     def __getitem__(self, key):
         return self.__dict__[key]
 
-    def __setitem__(self, key, value):
         self.__dict__[key] = value
 
     def __delitem__(self, key):
@@ -33,3 +32,11 @@ def load_config(fname, section):
     with open(fname, "r") as f:
         config = yaml.safe_load(f)
         return Settings(**config[section])
+
+
+def formatted_settings_str(settings, headerstr):
+    s = "{}\n".format(headerstr)
+    s += "{}\n".format("-" * len(headerstr))
+    for (key, val) in settings.iteritems():
+        s += "{}: {}\n".format(key, str(val))
+    return s

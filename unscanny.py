@@ -1,4 +1,17 @@
 #!/usr/bin/env python
+"""
+unscanny.py -- a Python program for time series imaging using scanners
+
+(c) 2017, Paul M. Magwene
+
+Flow of logic for core scanning routines:
+
+runit ->
+  _runit ->
+    choose_scanner
+    delay_loop
+    scanner_loop
+"""
 
 from __future__ import print_function, division
 import sys
@@ -11,46 +24,97 @@ import curses
 import click                   # library for building CLIs
 import pick                    # curses library for picking from lists
 
+import settings
 import scanfunctions
 import uncursed
 import unsettings
-import settings
 
 
-def scanner_settings_str(settings):
-    s = """\
-    Scanner Settings
-    ----------------
-    Source: {}
-    Mode: {}
-    Resolution: {}
-    Depth: {}"""
-    s = textwrap.dedent(s)
-    return s.format(settings.source, settings.mode,
-                    settings.resolution, settings.depth)
-    
-    
-def run_settings_str(settings):
-    s = """\
-    Run Settings
-    ------------
-    User: {}
-    Experiment: {}
-    Interval: {}
-    # of Scans: {} """
-    s = textwrap.dedent(s)
-    return s.format(settings.user, settings.experiment,
-                    settings.interval, settings.nscans)
 
-def choose_scanner(testing=False):
+class RunData(object):
+    """ A class to represent information associated with a run.
+    """
+    def __init__(self, run_settings, scanner_settings):
+        for (key,val) in run_settings.iteritems():
+            self.__dict__[key] = val
+        self.run_settings = run_settings
+        self.scanner_settings = scanner_settings
+        self.ct_nextscan = 0
+        self._log = []
+        self.t_start = None
+        self.t_lastscan = None
+        self.successful = False
+        self.scanner_settings_file = None
+        self.run_settings_file = None
+        self.basedir = "."
+        self.initial_delay = 0
+        self.succesful = False
+        self.UID = self.generate_id()
+
+    def log(self, entry):
+        self._log.append(entry)
+
+    def generate_id(self):
+        UUID = str(uuid.uuid4())
+        return UUID.split('-')[0]
+
+    def base_fname(self):
+        """ Base filename for run.
+        """
+        return "{}-{}-{}-{}".format(
+            self.t_start.strftime("%Y-%m-%d"),
+            self.user, self.experiment, self.UID)
+
+    def current_fname(self, timept = None):
+        """ Appropriate filename for current stage of run.
+        """
+        if timept is None:
+            timept = datetime.datetime.now()
+        timestr = timept.strftime("%Y%m%dT%H%M%S")
+        return "{}-{:04d}-{}".format(self.base_name,
+                                     self.ninterval,
+                                     timestr)
+
+    def generate_report(self):
+        idstr = "UID: {}".format(self.ID)
+        scanset = settings.formatted_settings_str(self.scanner_settings,
+                                                  "Scanner Settings")
+        runset = settings.formatted_settings_str(self.run_settings,
+                                                 "Run Settings")
+        startstr = "Start time:"
+        if self.t_start is not None:
+            startstr = "Start time: {}".format(self.t_start.isoformat())
+        endstr = "End time:"
+        if self.t_lastscan is not None:
+            endstr = "End time: {}".format(self.t_lastscan.isoformat()) 
+        totalstr = "Completed scans: {}".format(self.ct_nextscan)
+        succstr = "Run successful: {}".format(self.successful)
+        logstr = "Log:\n\t{}".format("\n\t".join(self._log))
+        parts = [idstr, scanset, runset, startstr, endstr,
+                 totalstr, succstr, logstr]
+        reportstr = "\n\n".join(parts)
+        return reportstr
+
+
+
+#  _   _ ___                   _    ____                 _                _      
+# | | | |_ _|   __ _ _ __   __| |  / ___|___  _ __ ___  | |    ___   __ _(_) ___ 
+# | | | || |   / _` | '_ \ / _` | | |   / _ \| '__/ _ \ | |   / _ \ / _` | |/ __|
+# | |_| || |  | (_| | | | | (_| | | |__| (_) | | |  __/ | |__| (_) | (_| | | (__ 
+#  \___/|___|  \__,_|_| |_|\__,_|  \____\___/|_|  \___| |_____\___/ \__, |_|\___|
+#                                                                   |___/        
+
+
+def choose_scanner():
     """Query for available scanners and return users choice.
     """
-    if testing:
-        return "test driver", dict()
+    # initialize driver and get list of available scanners
     scanfunctions.initialize_driver()
     scanners = scanfunctions.get_scanners()
     if not len(scanners):
         return None, None
+
+    # pick scanner using curses interface
     title = """Pick the scanner to use."""\
             """Up/Down arrow keys to select, Enter to accept."""
     choice, index = pick.pick(scanners, title)
@@ -93,7 +157,7 @@ def delay_loop(screen, delay_in_mins):
     return True
     
     
-def run_scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
+def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
     """ Generate scans at given intervals -> boolean indicating success/failure.
 
     A useful informational display is provided in a curses window to provide
@@ -167,48 +231,7 @@ def run_scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
         
     return True  
                 
-                                
-        
-class RunData(object):
-    def __init__(self, run_settings, scanner_settings):
-        for (key,val) in run_settings.iteritems():
-            self.__dict__[key] = val
-        self.scanner_settings = scanner_settings
-        self.ct_nextscan = 0
-        self._log = []
-        self.t_start = None
-        self.t_lastscan = None
-        self.successful = False
-        self.scanner_settings_file = None
-        self.run_settings_file = None
-        self.basedir = "."
-        self.succeeded = False
-        self.UID = self.generate_id()
 
-    def log(self, entry):
-        self._log.append(entry)
-
-    def generate_id(self):
-        UUID = str(uuid.uuid4())
-        return UUID.split('-')[0]
-
-    def generate_report(self):
-        idstr = "UID: {}".format(self.ID)
-        scanset = scanner_settings_str(self.scanner_settings)
-        runset = run_settings_str(self)
-        startstr = "Start time:"
-        if self.t_start is not None:
-            startstr = "Start time: {}".format(self.t_start.isoformat())
-        endstr = "End time:"
-        if self.t_lastscan is not None:
-            endstr = "End time: {}".format(self.t_lastscan.isoformat()) 
-        totalstr = "Total scans: {}".format(self.ct_nextscan)
-        logstr = "Log:\n\t{}".format("\n\t".join(self._log))
-        parts = [idstr, scanset, runset, startstr, endstr, totalstr, logstr]
-        reportstr = "\n\n".join(parts)
-        return reportstr
-        
-        
 def _runit(scanner_file, run_file):
     """Given scanner and run settings file, initiate scanning run.
     """
@@ -228,9 +251,9 @@ def _runit(scanner_file, run_file):
     print("Current settings")
     print("================")
     print()
-    print(run_settings_str(run_settings))
+    print(settings.formatted_settings_str(run_settings))
     print()
-    print(scanner_settings_str(scanner_settings))
+    print(settings.formatted_settings_str(scanner_settings))
     print()
     
     # Confirm settings are correct
@@ -279,10 +302,30 @@ def _runit(scanner_file, run_file):
     
 
     # enter scanner loop
-    run_data.succeeded = curses.wrapper(run_scanner_loop,
-                                        scanner, run_data)
+    run_data.successful = curses.wrapper(scanner_loop,
+                                         scanner, run_data)
+
+    # generate log file
+    log_file_name = RunData.base_fname() + ".log"
+    with open(log_file_name, "w") as f:
+        f.write(RunData.generate_report())
+
     return run_data
 
+
+
+#   ____                                          _       _     _            
+#  / ___|___  _ __ ___  _ __ ___   __ _ _ __   __| |     | |   (_)_ __   ___ 
+# | |   / _ \| '_ ` _ \| '_ ` _ \ / _` | '_ \ / _` |_____| |   | | '_ \ / _ \
+# | |__| (_) | | | | | | | | | | | (_| | | | | (_| |_____| |___| | | | |  __/
+#  \____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|     |_____|_|_| |_|\___|
+                                                                           
+#  ___       _             __                
+# |_ _|_ __ | |_ ___ _ __ / _| __ _  ___ ___ 
+#  | || '_ \| __/ _ \ '__| |_ / _` |/ __/ _ \
+#  | || | | | ||  __/ |  |  _| (_| | (_|  __/
+# |___|_| |_|\__\___|_|  |_|  \__,_|\___\___|
+                                           
 
 
 @click.group()
