@@ -20,6 +20,7 @@ import time, datetime
 import textwrap
 import uuid
 import curses
+from string import Formatter
 
 import click                   # library for building CLIs
 import pick                    # curses library for picking from lists
@@ -28,6 +29,32 @@ import settings
 import scanfunctions
 import uncursed
 import unsettings
+
+
+def strfdelta(tdelta, fmt):
+    """ string representation of timedelta object.
+
+    Code from: https://stackoverflow.com/a/17847006
+    """
+    f = Formatter()
+    d = {}
+    l = {'D': 86400, 'H': 3600, 'M': 60, 'S': 1}
+    k = map( lambda x: x[1], list(f.parse(fmt)))
+    rem = int(tdelta.total_seconds())
+
+    for i in ('D', 'H', 'M', 'S'):
+        if i in k and i in l.keys():
+            d[i], rem = divmod(rem, l[i])
+
+    return f.format(fmt, **d)
+
+def HHMMSS(tdelta):
+    return strfdelta(tdelta, "{H:02}:{M:02}:{S:02}")
+
+def time_until(t_end, t_now = None):
+    if t_now is None:
+        t_now = datetime.datetime.now()
+    return t_end - t_now
 
 
 
@@ -136,20 +163,27 @@ def delay_loop(screen, delay_in_mins):
             uncursed.centered_xcoord(screen, txt),
             txt)
 
-    delay_in_seconds = delay_in_mins * 60
-    waitstr = str(datetime.timedelta(0, delay_in_seconds))
+    # figure out end time
+    t_now = datetime.datetime.now()
+    t_end = t_now + datetime.timedelta(mins = delay_in_mins)
+    waitstr = HHMMSS(t_end - t_now)
+    
+    # set status bar
     uncursed.set_status_bar(screen,
             "Time until first scan: {}".format(waitstr))
     screen.refresh()
 
     # delay loop
-    while delay_in_seconds > 0:
+    while datetime.datetime.now() < t_end:
         time.sleep(1)
-        delay_in_seconds -= 1
-        waitstr = str(datetime.timedelta(0, delay_in_seconds))
+
+        # update status bar
+        waitstr = HHMMSS(time_until(t_end))
         uncursed.set_status_bar(screen,
                 "Time until first scan: {}".format(waitstr))
         screen.refresh()
+
+        # check for abort key
         c = screen.getch()
         if c == ord("Q"):
             return False
@@ -167,7 +201,7 @@ def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
     curses.curs_set(0)          # make cursor invisible
     screen.nodelay(1)           # make getch() non-blocking
 
-    # Setup screen dispaly
+    # Setup screen display
     txt = """Collecting {} scans at {} minute intervals.\n""".format(
         run_data.nscans, run_data.interval)
     txt += """Press capital "Q" to abort."""
@@ -192,18 +226,17 @@ def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
 
     # Run loop for remaining scans
     while run_data.ct_nextscan < run_data.nscans:
-
-        delay_in_seconds = run_data.interval * 60
+        t_nextscan = run_data.t_lastscan + \
+                     datetime.timedelta(minutes=run_data.interval)
 
         # run tasks in interval between scans
-        while delay_in_seconds > 0:
+        while datetime.datetime.now() < t_nextscan:
             time.sleep(1)
-            delay_in_seconds -= 1
 
             # update status bar
-            waitstr = str(datetime.timedelta(0, delay_in_seconds))
+            waitstr = HHMMSS(t_nextscan)
             uncursed.set_status_bar(screen,
-                "Scan {} completed at {}. Next scan in {}".format(
+                "Scan {} was run at {}. Next scan in {}".format(
                     run_data.ct_nextscan - 1,
                     run_data.t_lastscan.ctime(),
                     waitstr))
@@ -220,14 +253,6 @@ def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
 
         # carry out scan
         scan_func(scanner, run_data)
-        
-        # scan now completed, update status bar again
-        uncursed.set_status_bar(screen,
-            "Scan {} completed at {}. Next scan in {}".format(
-            run_data.ct_nextscan - 1,
-            run_data.t_lastscan.ctime(),
-            waitstr))
-        screen.refresh()
         
     return True  
                 
