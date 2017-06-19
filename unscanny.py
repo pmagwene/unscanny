@@ -103,7 +103,7 @@ class RunData(object):
                                      timestr)
 
     def generate_report(self):
-        idstr = "UID: {}".format(self.ID)
+        idstr = "UID: {}".format(self.UID)
         scanset = settings.formatted_settings_str(self.scanner_settings,
                                                   "Scanner Settings")
         runset = settings.formatted_settings_str(self.run_settings,
@@ -115,7 +115,7 @@ class RunData(object):
         if self.t_lastscan is not None:
             endstr = "End time: {}".format(self.t_lastscan.isoformat()) 
         totalstr = "Completed scans: {}".format(self.ct_nextscan)
-        succstr = "Run successful: {}".format(self.successful)
+        succstr = "Run successful: {}".format(str(self.successful))
         logstr = "Log:\n\t{}".format("\n\t".join(self._log))
         parts = [idstr, scanset, runset, startstr, endstr,
                  totalstr, succstr, logstr]
