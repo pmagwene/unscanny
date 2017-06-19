@@ -234,7 +234,7 @@ def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
             time.sleep(1)
 
             # update status bar
-            waitstr = HHMMSS(t_nextscan)
+            waitstr = HHMMSS(t_nextscan - run_data.t_lastscan)
             uncursed.set_status_bar(screen,
                 "Scan {} was run at {}. Next scan in {}".format(
                     run_data.ct_nextscan - 1,
