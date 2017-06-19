@@ -165,7 +165,7 @@ def delay_loop(screen, delay_in_mins):
 
     # figure out end time
     t_now = datetime.datetime.now()
-    t_end = t_now + datetime.timedelta(mins = delay_in_mins)
+    t_end = t_now + datetime.timedelta(minutes = delay_in_mins)
     waitstr = HHMMSS(t_end - t_now)
     
     # set status bar
