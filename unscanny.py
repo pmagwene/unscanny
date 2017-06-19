@@ -98,7 +98,7 @@ class RunData(object):
         if timept is None:
             timept = datetime.datetime.now()
         timestr = timept.strftime("%Y%m%dT%H%M%S")
-        return "{}-{:04d}-{}".format(self.base_name,
+        return "{}-{:04d}-{}".format(self.base_fname(),
                                      self.ninterval,
                                      timestr)
 
