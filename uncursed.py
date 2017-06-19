@@ -10,7 +10,7 @@ def centered_xcoord(win, s):
     if isinstance(s, int):
         maxlen = s
     else:
-        maxline = max_line_len(s)
+        maxlen = max_line_len(s)
     return (ncols // 2) - (maxlen // 2)
 
 def centered_ycoord(win, s):
