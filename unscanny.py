@@ -331,9 +331,9 @@ def _runit(scanner_file, run_file):
                                          scanner, run_data)
 
     # generate log file
-    log_file_name = RunData.base_fname() + ".log"
-    with open(log_file_name, "w") as f:
-        f.write(RunData.generate_report())
+    report_file_name = run_data.base_fname() + ".report"
+    with open(report_file_name, "w") as f:
+        f.write(run_data.generate_report())
 
     return run_data
 
