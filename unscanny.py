@@ -234,7 +234,7 @@ def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
             time.sleep(1)
 
             # update status bar
-            waitstr = HHMMSS(t_nextscan - run_data.t_lastscan)
+            waitstr = HHMMSS(time_until(t_nextscan))
             uncursed.set_status_bar(screen,
                 "Scan {} was run at {}. Next scan in {}".format(
                     run_data.ct_nextscan - 1,
@@ -248,7 +248,7 @@ def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
                 return False
 
         # interval completed, update status bar to indicate scanning has begun
-        uncursed.set_status_bar("Scanning...")
+        uncursed.set_status_bar(screen, "Scanning...")
         screen.refresh()
 
         # carry out scan
