@@ -276,9 +276,9 @@ def _runit(scanner_file, run_file):
     print("Current settings")
     print("================")
     print()
-    print(settings.formatted_settings_str(run_settings))
+    print(settings.formatted_settings_str(run_settings, "Run Settings"))
     print()
-    print(settings.formatted_settings_str(scanner_settings))
+    print(settings.formatted_settings_str(scanner_settings, "Scanner Settings"))
     print()
     
     # Confirm settings are correct
