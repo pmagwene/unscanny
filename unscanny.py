@@ -99,7 +99,7 @@ class RunData(object):
             timept = datetime.datetime.now()
         timestr = timept.strftime("%Y%m%dT%H%M%S")
         return "{}-{:04d}-{}".format(self.base_fname(),
-                                     self.ninterval,
+                                     self.ct_nextscan,
                                      timestr)
 
     def generate_report(self):
