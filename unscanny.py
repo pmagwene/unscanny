@@ -132,12 +132,12 @@ class RunData(object):
 #                                                                   |___/        
 
 
-def choose_scanner():
+def choose_scanner(test=False):
     """Query for available scanners and return users choice.
     """
     # initialize driver and get list of available scanners
     scanfunctions.initialize_driver()
-    scanners = scanfunctions.get_scanners()
+    scanners = scanfunctions.get_scanners(test = test)
     if not len(scanners):
         return None, None
 
@@ -257,7 +257,7 @@ def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
     return True  
                 
 
-def _runit(scanner_file, run_file):
+def _runit(scanner_file, run_file, test = False):
     """Given scanner and run settings file, initiate scanning run.
     """
     # Load settings files
@@ -269,6 +269,10 @@ def _runit(scanner_file, run_file):
     run_data.scanner_settings_file = scanner_file
     run_data.run_settings_file = run_file
 
+    if test:
+        run_data.scanner_settings.source = "Flatbed"
+        run_data.scanner_settings.test_picture = "Color pattern"
+
     # Clear screen and show settings
     click.clear()
     print("Welcome to Unscanny -- A program for time series scanner imaging")
@@ -276,9 +280,11 @@ def _runit(scanner_file, run_file):
     print("Current settings")
     print("================")
     print()
-    print(settings.formatted_settings_str(run_settings, "Run Settings"))
+    print(settings.formatted_settings_str(run_data.run_settings,
+                                          "Run Settings"))
     print()
-    print(settings.formatted_settings_str(scanner_settings, "Scanner Settings"))
+    print(settings.formatted_settings_str(run_data.scanner_settings,
+                                          "Scanner Settings"))
     print()
     
     # Confirm settings are correct
@@ -290,7 +296,7 @@ def _runit(scanner_file, run_file):
     # Pick scanner from list of discovered scanners
     while True:
         click.pause("Press any key to continue to scanner menu...")
-        device_info, scanner = choose_scanner()
+        device_info, scanner = choose_scanner(test = test)
         if scanner is None:
             if not click.confirm("No scanner found. Retry?"):
                 click.echo("Exiting: no scanner found")
@@ -300,13 +306,12 @@ def _runit(scanner_file, run_file):
         break
 
     # Apply settings to device
-    scanner_settings.device_info = device_info
-    scanfunctions.apply_scanner_settings(scanner, scanner_settings)
+    run_data.scanner_settings.device_info = device_info
+    scanfunctions.apply_scanner_settings(scanner, run_data.scanner_settings)
 
     # Confirm begin scanning
     if not click.confirm(
-            "\n Are you ready to begin scanning?".format(device_info[0]),
-            default = True):
+            "\nAre you ready to begin scanning?", default = True):
         click.echo("Exiting: User exited before scanning.")
         run_data.log("Aborted: user exited before scanning")
         return run_data
@@ -335,6 +340,11 @@ def _runit(scanner_file, run_file):
     with open(report_file_name, "w") as f:
         f.write(run_data.generate_report())
 
+    if run_data.successful:
+        click.echo("\nSuccessful run. See report: {}".format(report_file_name))
+    else:
+        click.echo("\nUnsuccessful run. See report: {}".format(report_file_name))
+
     return run_data
 
 
@@ -358,10 +368,12 @@ def cli():
     pass
 
 @click.command()
+@click.option("--test/--no-test", default=False,
+              help = "Use 'test' scanner backend.")
 @click.argument("scanner_file", type = click.Path(exists=True))
 @click.argument("run_file", type = click.Path(exists=True))
-def runit(scanner_file, run_file):
-    _runit(scanner_file, run_file)
+def runit(scanner_file, run_file, test):
+    _runit(scanner_file, run_file, test)
     
 cli.add_command(unsettings.setrun)
 cli.add_command(unsettings.setscanner)

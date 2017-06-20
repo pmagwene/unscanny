@@ -12,9 +12,11 @@ def initialize_driver():
     """
     return sane.init()
 
-def get_scanners(localOnly=True):
+def get_scanners(localOnly=True, test = False):
     """Get list of available scanners.
     """
+    if test:
+        return [("test", "SANE", "SANE", "SANE")]
     return sane.get_devices(localOnly)
 
 def open_scanner(device_name):
@@ -25,10 +27,8 @@ def open_scanner(device_name):
 def apply_scanner_settings(scanner, settings):
     """Apply info from Settings object to scanner object.
     """
-    scanner.mode = settings.mode
-    scanner.source = settings.source
-    scanner.resolution = settings.resolution
-    scanner.depth = settings.depth
+    for (key, value) in settings.iteritems():
+        setattr(scanner, key, value)
     return scanner
 
 

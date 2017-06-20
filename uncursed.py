@@ -1,6 +1,8 @@
+import time
 import string
 import curses
 import curses.panel as panel
+
 
 def max_line_len(s):
     return max([len(i) for i in s.splitlines()])
@@ -54,14 +56,18 @@ def setup_screen(screen, nonblocking=True):
     
 def test(screen, s, just=None):
     setup_screen(screen, nonblocking=True)
-    win = new_text_panel(s, just = just)
+
+    win = new_text_win(s, just = just)
     h, w = win.getmaxyx()
     y, x = centered_ycoord(screen, h), centered_xcoord(screen, w)
-    win.mvwin(y,x)
+
+    pnl = panel.new_panel(win)
+    pnl.move(y,x)
 
     set_status_bar(screen, "Push 'q' to quit")
-    screen.refresh()
-    win.refresh()
+    screen.noutrefresh()
+    panel.update_panels()
+    curses.doupdate()
 
     # loop until receive 'q'
     while True:
