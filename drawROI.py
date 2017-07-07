@@ -66,6 +66,24 @@ class SelectorCollection(object):
         if event.key in [str(i) for i in range(1, nselectors+1)]:
             self.current = int(event.key) - 1
             self.activate_current()
+        elif event.key == "left":
+            xmin, xmax, ymin, ymax = self.selectors[self.current].extents
+            self.selectors[self.current].extents = (xmin - 5, xmax - 5,
+                                                    ymin, ymax)
+        elif event.key == "right":
+            xmin, xmax, ymin, ymax = self.selectors[self.current].extents
+            self.selectors[self.current].extents = (xmin + 5, xmax + 5,
+                                                    ymin, ymax)
+        elif event.key == "up":
+            xmin, xmax, ymin, ymax = self.selectors[self.current].extents
+            self.selectors[self.current].extents = (xmin, xmax,
+                                                    ymin - 5, ymax - 5)
+        elif event.key == "down":
+            xmin, xmax, ymin, ymax = self.selectors[self.current].extents
+            self.selectors[self.current].extents = (xmin, xmax,
+                                                    ymin + 5, ymax + 5)
+        else:
+            return
         [i.update() for i in self.selectors]
 
     def _update_selector(self, i, interactive):
@@ -105,11 +123,11 @@ class SelectorCollection(object):
         def height(selector):
             _, _, ymin, ymax = selector.extents
             return ymax - ymin
-        maxW = max([width(i) for i in self.selectors])
-        maxH = max([height(i) for i in self.selectors])
+        minW = min([width(i) for i in self.selectors])
+        minH = min([height(i) for i in self.selectors])
         for selector in self.selectors:
             xmin, _, ymin, _ = selector.extents
-            selector.extents = (xmin, xmin + maxW, ymin, ymin + maxH)
+            selector.extents = (xmin, xmin + minW, ymin, ymin + minH)
 
     def normalize_and_update(self, event):
         self.normalize_geometry()
