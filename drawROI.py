@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from skimage import (transform, io)
 
 import click
+import json
 import yaml
 
 
@@ -141,11 +142,13 @@ class SelectorCollection(object):
             pstr = "Region{:03d}".format(i + 1)
             d[pstr] = {}
             xmin, xmax, ymin, ymax = selector.extents
-            d[pstr] = dict(xmin = int(xmin), xmax=int(xmax), 
-                           ymin = int(ymin), ymax=int(ymax))
-        yaml.safe_dump(d, self.outfile,
-            default_flow_style=False,
-            encoding = "utf-8")
+            d[pstr] = (int(ymin), int(xmin), int(ymax), int(xmax))
+               #dict(xmin = int(xmin), xmax=int(xmax), 
+               #            ymin = int(ymin), ymax=int(ymax))
+        # yaml.safe_dump(d, self.outfile,
+        #     default_flow_style=False,
+        #     encoding = "utf-8")
+        json.dump(d, self.outfile, indent = 1)
         plt.close("all")
 
     
@@ -160,7 +163,7 @@ class SelectorCollection(object):
               help = "Number of columns of ROIs",
               type = click.IntRange(1,4),
               default = 2)
-@click.option("--normalized/--not-normalized", default=True,
+@click.option("--normalized/--unnormalized", default=True,
               help = "Make ROIs uniform in size.")
 @click.argument("image_file",  
                 type = click.Path(exists=True))
@@ -168,13 +171,16 @@ class SelectorCollection(object):
                 type = click.File("w"),
                 default = "-")
 def main(image_file, outfile, rows, cols, normalized):
-    """Define regions of interest (ROIs) on an image,
-    and return the bounding boxes of those ROIs. Assumes
-    a grid of ROIs, but no constraints on ROI overlap.
+    """Define regions of interest (ROIs) on an image, and return bounding boxes.
+
+    Assumes a grid of ROIs, but no constraints on ROI overlap.
+    
+    Bounding boxes are (minrow, mincol, maxrow, maxcol) to be
+    consistent with skimage.
     
     Returned bounding boxes are returned in YAML format for easy
     parsing. See extractROI for a program that operates on ROIs.
-    
+
     """
     img = np.squeeze(io.imread(image_file))    
     fig, main_ax = plt.subplots()  
