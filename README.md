@@ -4,9 +4,10 @@ A Python program for time series imaging using flatbed scanners
 
 ## Goals
 
-Time series imaging of pinned colonies growing on solid agar plates, using readily available flatbed scanner, is becoming an increasingly popular (REFs) approach for high-throughput phenotyping in microbial genetics and genomics.
+Time series imaging of pinned colonies growing on solid agar plates, using readily available flatbed scanners, is becoming an increasingly popular (REFs) approach for high-throughput phenotyping in microbial genetics and genomics.
 
 With `unscanny` we aim to provide a simple yet flexible program and associated library, for carrying out scanner based time series imaging on Linux and OS X, using SANE compatible scanners. The framework was written with the Epson V700/800 series of scanners in mind (which is what we use in our laboratory), but there is (hopefully) little code that is specific to this particular devices. 
+
 
 ## Philosophy
 
@@ -28,9 +29,11 @@ Running an experiment in `unscanny` requires two input files that describe key p
 
 * Curses -- the standard Python curses library plus [pick](https://github.com/wong2/pick), a module for choosing items using a curses interface.
 
-* [Click](http://click.pocoo.org/) - A Python library for building command-line interfaces
+* [Click](http://click.pocoo.org/) - A Python library for building command-line interfaces.
 
 * TIFF -- the library [tifffile](https://github.com/blink1073/tifffile) provides support for 16 bit TIFF images, embedding tags, etc.
+
+* [PySerial](https://github.com/pyserial/pyserial) -- A Python library for working with serial port devices like remote power managers.
 
 
 ## Usage

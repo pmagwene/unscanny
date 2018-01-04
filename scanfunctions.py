@@ -1,6 +1,6 @@
 from __future__ import print_function
 import time, datetime
-import threading
+
 
 import sane
 import numpy as np

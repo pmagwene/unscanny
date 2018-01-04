@@ -28,7 +28,7 @@ import pick                    # curses library for picking from lists
 import settings
 import scanfunctions
 import uncursed
-import unsettings
+
 
 
 def strfdelta(tdelta, fmt):
@@ -61,11 +61,12 @@ def time_until(t_end, t_now = None):
 class RunData(object):
     """ A class to represent information associated with a run.
     """
-    def __init__(self, run_settings, scanner_settings):
+    def __init__(self, run_settings, scanner_settings, power_settings):
         for (key,val) in run_settings.iteritems():
             self.__dict__[key] = val
         self.run_settings = run_settings
         self.scanner_settings = scanner_settings
+        self.power_settings = power_settings
         self.ct_nextscan = 0
         self._log = []
         self.t_start = None
@@ -75,7 +76,6 @@ class RunData(object):
         self.run_settings_file = None
         self.basedir = "."
         self.initial_delay = 0
-        self.succesful = False
         self.UID = self.generate_id()
 
     def log(self, entry):
@@ -156,7 +156,7 @@ def delay_loop(screen, delay_in_mins):
     curses.curs_set(0)
     screen.nodelay(1)
 
-    txt = """Waiting to begin first scan.\n"""\
+    txt = """Waiting to begin first scan cycle.\n"""\
           """Press capital "Q" to cancel wait and abort scanning run."""
     uncursed.add_multiline_str(screen,
             uncursed.centered_ycoord(screen, txt),
@@ -170,7 +170,7 @@ def delay_loop(screen, delay_in_mins):
     
     # set status bar
     uncursed.set_status_bar(screen,
-            "Time until first scan: {}".format(waitstr))
+            "Time until first scan cycle: {}".format(waitstr))
     screen.refresh()
 
     # delay loop
@@ -180,7 +180,7 @@ def delay_loop(screen, delay_in_mins):
         # update status bar
         waitstr = HHMMSS(time_until(t_end))
         uncursed.set_status_bar(screen,
-                "Time until first scan: {}".format(waitstr))
+                "Time until first scan cycle: {}".format(waitstr))
         screen.refresh()
 
         # check for abort key
@@ -189,9 +189,63 @@ def delay_loop(screen, delay_in_mins):
             return False
 
     return True
+
+
+def countdown_screen(screen, delay_in_secs, 
+                     main_txt = None, 
+                     status_txt = None,
+                     abort_key = "Q"):
+    """ A curses loop for a delay screen.
+    """
+    screen.clear()
+    curses.curs_set(0)
+    screen.nodelay(1)
+
+    if main_txt is None:
+        main_txt = "Waiting. \nPress capital '{}' to cancel wait.".format(abort_key)
+
+    if status_txt is None:
+        status_txt = "Time remaining"
+
+    uncursed.add_multiline_str(screen,
+            uncursed.centered_ycoord(screen, main_txt),
+            uncursed.centered_xcoord(screen, main_txt),
+            main_txt)
+
+    # figure out end time
+    t_now = datetime.datetime.now()
+    t_end = t_now + datetime.timedelta(seconds = delay_in_secs)
+    waitstr = HHMMSS(t_end - t_now)
+    
+    # set status bar
+    uncursed.set_status_bar(screen,
+            "{}: {}".format(status_txt, waitstr))
+    screen.refresh()
+
+    # delay loop
+    while datetime.datetime.now() < t_end:
+        time.sleep(1)
+
+        # update status bar
+        waitstr = HHMMSS(time_until(t_end))
+        uncursed.set_status_bar(screen,
+                "{}: {}".format(status_txt, waitstr))
+        screen.refresh()
+
+        # check for abort key
+        c = screen.getch()
+        if abort_key:
+            if c == ord(abort_key):
+                return False
+
+    return True
     
     
-def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
+
+
+
+
+def scanner_loop(screen, scanner, power_manager, run_data, scan_func = scanfunctions.scan):
     """ Generate scans at given intervals -> boolean indicating success/failure.
 
     A useful informational display is provided in a curses window to provide
@@ -209,6 +263,20 @@ def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
                                uncursed.centered_ycoord(screen, txt),
                                uncursed.centered_xcoord(screen, txt),
                                txt)
+    uncursed.set_status_bar(screen, "Pausing for power on...")
+    screen.refresh()
+    power_manager.power_on(run_data.power_settings.outlet)
+
+    for i in range(max(0, run_data.power_settings.on_delay)):
+        uncursed.set_status_bar(screen,
+                                "Power on in progress. {} secs remaining.".format(run_data.power_settings.on_delay - (i+1)))
+        screen.refresh()
+        time.sleep(1)    
+        # did we get the abort signal?
+        c = screen.getch()
+        if c == ord("Q"):
+            return False        
+
     uncursed.set_status_bar(screen, "Running first scan...")
     screen.refresh()
 
@@ -217,6 +285,10 @@ def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
     run_data.t_lastscan = None
     run_data.ct_nextscan = 0
     run_data = scan_func(scanner, run_data)
+
+    # power off, if on delay less than interval between scans
+    if run_data.power_settings.on_delay < (run_data.interval * 60):  
+        power_manager.power_off(run_data.power_settings.outlet)
 
     # Update status bar
     uncursed.set_status_bar(screen,
@@ -227,7 +299,8 @@ def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
     # Run loop for remaining scans
     while run_data.ct_nextscan < run_data.nscans:
         t_nextscan = run_data.t_lastscan + \
-                     datetime.timedelta(minutes=run_data.interval)
+                     datetime.timedelta(minutes=run_data.interval) - \
+                     datetime.timedelta(seconds = run_data.power_settings.on_delay)
 
         # run tasks in interval between scans
         while datetime.datetime.now() < t_nextscan:
@@ -236,7 +309,7 @@ def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
             # update status bar
             waitstr = HHMMSS(time_until(t_nextscan))
             uncursed.set_status_bar(screen,
-                "Scan {} was run at {}. Next scan in {}".format(
+                "Scan {} was run at {}. Next scan cycle in {}.".format(
                     run_data.ct_nextscan - 1,
                     run_data.t_lastscan.ctime(),
                     waitstr))
@@ -247,31 +320,67 @@ def scanner_loop(screen, scanner, run_data, scan_func = scanfunctions.scan):
             if c == ord("Q"):
                 return False
 
-        # interval completed, update status bar to indicate scanning has begun
+        # interval completed, power on
+        uncursed.set_status_bar(screen, "Pausing for power on...")
+        screen.refresh()
+        power_manager.power_on(run_data.power_settings.outlet)
+        for i in range(max(0, run_data.power_settings.on_delay)):
+            uncursed.set_status_bar(screen,
+                                    "Power on in progress. {} secs remaining.".format(run_data.power_settings.on_delay - (i+1)))
+            screen.refresh()
+            time.sleep(1)
+            # did we get the abort signal?
+            c = screen.getch()
+            if c == ord("Q"):
+                return False             
+
+        # update status bar to indicate scanning has begun
         uncursed.set_status_bar(screen, "Scanning...")
         screen.refresh()
 
         # carry out scan
         scan_func(scanner, run_data)
+
+        # power off
+        if run_data.power_settings.on_delay < (run_data.interval * 60):  
+            power_manager.power_off(run_data.power_settings.outlet)        
         
     return True  
                 
 
-def _runit(scanner_file, run_file, test = False):
+
+
+generic_power_settings = {"model": "Generic",
+                          "port": None,
+                          "outlet": 1,
+                          "on_delay": 0,
+                          "off_delay": 0}
+
+
+def _runit(scanner_file, run_file, power_file = None, test = False):
     """Given scanner and run settings file, initiate scanning run.
     """
     # Load settings files
     scanner_settings = settings.load_config(scanner_file, "scanner")
     run_settings = settings.load_config(run_file, "run")
+    if power_file is None:
+        power_settings = settings.Settings(**generic_power_settings)
+    else:
+        power_settings = settings.load_config(power_file, "power")
 
     # Create run data object
-    run_data = RunData(run_settings, scanner_settings)
+    run_data = RunData(run_settings, scanner_settings, power_settings)
     run_data.scanner_settings_file = scanner_file
     run_data.run_settings_file = run_file
+
+    # Create power manager
+    power_manager = powerfunctions.create_powermanager(power_settings.model, 
+                                                       power_settings.port)
 
     if test:
         run_data.scanner_settings.source = "Flatbed"
         run_data.scanner_settings.test_picture = "Color pattern"
+
 
     # Clear screen and show settings
     click.clear()
@@ -286,12 +395,24 @@ def _runit(scanner_file, run_file, test = False):
     print(settings.formatted_settings_str(run_data.scanner_settings,
                                           "Scanner Settings"))
     print()
+    print(settings.formatted_settings_str(power_settings,
+                                          "Power Settings"))
+    print()    
     
     # Confirm settings are correct
     if not click.confirm("Are these settings correct?", default=True):
         click.echo("Exiting: User indicated incorrect settings.")
         run_data.log("Aborted: incorrect run/scanner settings.")
         return run_data
+
+    # Power on scanner
+    click.pause("Press any key to initiate power manager...")
+    power_manager.power_on(run_data.power_settings.outlet)
+    finished_poweron = curses.wrapper(countdown_screen, 
+                                      run_data.power_settings.on_delay,
+                                      main_txt = """Initiating power manager.\n""",
+                                      abort_key = None)
+
 
     # Pick scanner from list of discovered scanners
     while True:
@@ -325,7 +446,9 @@ def _runit(scanner_file, run_file, test = False):
 
     # run delay loop
     if init_delay > 0:
-        finished_delay = curses.wrapper(delay_loop, init_delay)
+        if init_delay > (run_data.power_setting.on_delay/60):
+            power_manager.power_off(run_data.power_settings.outlet)
+        finished_delay = curses.wrapper(delay_loop, init_delay - (run_data.power_setting.on_delay/60))
         if not finished_delay:
             run_data.log("Aborted: user cancelled during initial delay.")
             return run_data
@@ -333,7 +456,7 @@ def _runit(scanner_file, run_file, test = False):
 
     # enter scanner loop
     run_data.successful = curses.wrapper(scanner_loop,
-                                         scanner, run_data)
+                                         scanner, power_manager, run_data)
 
     # generate log file
     report_file_name = run_data.base_fname() + ".report"
@@ -368,16 +491,24 @@ def cli():
     pass
 
 @click.command()
-@click.option("--test/--no-test", default=False,
+@click.option("--test/--no-test", default=False, show_default = True,
               help = "Use 'test' scanner backend.")
-@click.argument("scanner_file", type = click.Path(exists=True))
-@click.argument("run_file", type = click.Path(exists=True))
-def runit(scanner_file, run_file, test):
-    _runit(scanner_file, run_file, test)
-    
+@click.option("--power_file", default=None, show_default = True,
+              type = click.Path(exists=False, dir_okay=False),
+              help = "YAML file with power manager info.")
+@click.argument("scanner_file", 
+                type = click.Path(exists=True, dir_okay=False))
+@click.argument("run_file", 
+                type = click.Path(exists=True, dir_okay=False))
+def runit(scanner_file, run_file, power_file, test):
+    _runit(scanner_file, run_file, power_file, test)
+
+
+import powerfunctions, unsettings    
 cli.add_command(unsettings.setrun)
 cli.add_command(unsettings.setscanner)
 cli.add_command(runit)
+cli.add_command(powerfunctions.setpower)
 
 if __name__ == "__main__":
     cli()
