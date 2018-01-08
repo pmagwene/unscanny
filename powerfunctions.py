@@ -41,7 +41,7 @@ class PowerManager:
 
 class NP05B(PowerManager):
     def __init__(self, portname):
-        PowerManger.__init__(self, portname)
+        PowerManager.__init__(self, portname)
         self.serial = serial.Serial()
         self.serial.port = portname
         self.serial.baudrate = 9600
