@@ -194,7 +194,8 @@ def delay_loop(screen, delay_in_mins):
 def countdown_screen(screen, delay_in_secs, 
                      main_txt = None, 
                      status_txt = None,
-                     abort_key = "Q"):
+                     abort_key = "Q",
+                     sleep_time = 0.25):
     """ A curses loop for a delay screen.
     """
     screen.clear()
@@ -202,7 +203,7 @@ def countdown_screen(screen, delay_in_secs,
     screen.nodelay(1)
 
     if main_txt is None:
-        main_txt = "Waiting. \nPress capital '{}' to cancel wait.".format(abort_key)
+        main_txt = "Waiting. \nPress '{}' to abort.".format(abort_key)
 
     if status_txt is None:
         status_txt = "Time remaining"
@@ -224,7 +225,7 @@ def countdown_screen(screen, delay_in_secs,
 
     # delay loop
     while datetime.datetime.now() < t_end:
-        time.sleep(1)
+        time.sleep(sleep_time)
 
         # update status bar
         waitstr = HHMMSS(time_until(t_end))
@@ -245,6 +246,11 @@ def countdown_screen(screen, delay_in_secs,
 
 
 
+def update_status_bar(screen, txt):
+    uncursed.set_status_bar(screen, txt)
+    screen.refresh()
+
+
 def scanner_loop(screen, scanner, power_manager, run_data, scan_func = scanfunctions.scan):
     """ Generate scans at given intervals -> boolean indicating success/failure.
 
@@ -263,23 +269,22 @@ def scanner_loop(screen, scanner, power_manager, run_data, scan_func = scanfunct
                                uncursed.centered_ycoord(screen, txt),
                                uncursed.centered_xcoord(screen, txt),
                                txt)
-    uncursed.set_status_bar(screen, "Pausing for power on...")
-    screen.refresh()
+    update_status_bar(screen, "Pausing for power on...")
+
     power_manager.power_on(run_data.power_settings.outlet)
 
     for i in range(max(0, run_data.power_settings.on_delay)):
-        uncursed.set_status_bar(screen,
-                                "Power on in progress. {} secs remaining.".format(run_data.power_settings.on_delay - (i+1)))
-        screen.refresh()
-        time.sleep(1)    
+        update_status_bar(screen,
+                          "Waiting {} secs for scanner to initialize.".format(run_data.power_settings.on_delay - (i+1)))
+        time.sleep(1)   
+
         # did we get the abort signal?
         c = screen.getch()
         if c == ord("Q"):
             return False        
 
-    uncursed.set_status_bar(screen, "Running first scan...")
-    screen.refresh()
-
+    update_status_bar(screen, "Running first scan...")
+    
     # Run first scan 
     run_data.t_start = datetime.datetime.now()
     run_data.t_lastscan = None
@@ -290,11 +295,11 @@ def scanner_loop(screen, scanner, power_manager, run_data, scan_func = scanfunct
     if run_data.power_settings.on_delay < (run_data.interval * 60):  
         power_manager.power_off(run_data.power_settings.outlet)
 
-    # Update status bar
-    uncursed.set_status_bar(screen,
-        "Scan {} at {}".format(run_data.ct_nextscan - 1,
-                               run_data.t_lastscan.ctime()))
-    screen.refresh()
+
+    update_status_bar(screen, 
+                      "Scan {} at {}".format(run_data.ct_nextscan - 1,
+                                             run_data.t_lastscan.ctime()))
+    
 
     # Run loop for remaining scans
     while run_data.ct_nextscan < run_data.nscans:
@@ -305,27 +310,23 @@ def scanner_loop(screen, scanner, power_manager, run_data, scan_func = scanfunct
         # run tasks in interval between scans
         while datetime.datetime.now() < t_nextscan:
             time.sleep(1)
-
             # update status bar
             waitstr = HHMMSS(time_until(t_nextscan))
-            uncursed.set_status_bar(screen,
+            update_status_bar(screen,
                 "Scan {} was run at {}. Next scan cycle in {}.".format(
                     run_data.ct_nextscan - 1,
                     run_data.t_lastscan.ctime(),
                     waitstr))
-            screen.refresh()
 
             # did we get the abort signal?
             c = screen.getch()
             if c == ord("Q"):
                 return False
 
-        # interval completed, power on
-        uncursed.set_status_bar(screen, "Pausing for power on...")
-        screen.refresh()
+        
         power_manager.power_on(run_data.power_settings.outlet)
         for i in range(max(0, run_data.power_settings.on_delay)):
-            uncursed.set_status_bar(screen,
+            update_status_bar(screen,
                                     "Power on in progress. {} secs remaining.".format(run_data.power_settings.on_delay - (i+1)))
             screen.refresh()
             time.sleep(1)

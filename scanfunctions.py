@@ -27,13 +27,12 @@ def open_scanner(device_name):
     return sane.open(device_name)
 
 
-
 def apply_scanner_settings(scanner, settings_dict):
     """Apply info from Settings object to scanner object.
     """
     # mode should always be set first to insure options are active
     if "mode" in settings_dict:
-        setattr(scanner, key, settings_dict["mode"])
+        setattr(scanner, "mode", settings_dict["mode"])
     for (key, value) in settings_dict.iteritems():
         setattr(scanner, key, value)
     return scanner
@@ -71,11 +70,24 @@ def scan(scanner, run_data):
     return run_data
 
 
-def do_scanning(device_name, settings_dict):
+def do_scanningX(device_name, settings_dict):
     initialize_driver()
     scanner = open_scanner(device_name)
     apply_scanner_settings(scanner, settings_dict)
     imgarray = scanner.arr_scan()
     scanner.close()
     return imgarray
+
+def do_scanning(device_name, settings_dict):
+    sane.init()
+    scanner = sane.open(device_name)
+    if "mode" in settings_dict:
+        scanner.mode = settings_dict["mode"]
+    for (key, value) in settings_dict.iteritems():
+        setattr(scanner, key, value)
+    imgarray = scanner.arr_scan()
+    scanner.close()
+    sane.exit()
+    return imgarray
+
 

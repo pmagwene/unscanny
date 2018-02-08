@@ -8,6 +8,7 @@ from serial.tools import list_ports
 import pick
 import yaml
 import click
+import requests
 
 
 
@@ -39,7 +40,50 @@ class PowerManager:
         pass
 
 
-class NP05B(PowerManager):
+class NP05B_http(PowerManager):
+    def __init__(self, portname, username = "admin", password = "admin"):
+        PowerManager.__init__(self, portname)
+        self.username = username
+        self.password = password
+        self.url = "http://{}/cmd.cgi?".format(portname)
+
+    def _run_command(self, cmd, args=[]):
+        argstr = " ".join([str(i) for i in args])
+        fullurl = "{}{} {}".format(self.url, cmd, argstr)
+        r = requests.post(fullurl, auth=(self.username, self.password))
+        return r
+
+    def all_on(self):
+        cmd = "$A7"
+        args = [1]
+        return self._run_command(cmd, args)
+
+    def all_off(self):       
+        cmd = "$A7"
+        args = [0]
+        return self._run_command(cmd, args)
+
+    def power_on(self, outlet):
+        cmd = "$A3"
+        args = [outlet, 1]
+        return self._run_command(cmd, args)
+
+    def power_off(self, outlet):
+        cmd = "$A3"
+        args = [outlet, 0]
+        return self._run_command(cmd, args)
+
+    def is_on(self, outlet):
+        return self.status()[outlet - 1] == 1
+
+    def status(self):
+        cmd = "$A5"
+        status_str = self._run_command(cmd).content
+        return [i for i in reversed([int(c) for c in status_str])]
+
+
+
+class NP05B_serial(PowerManager):
     def __init__(self, portname):
         PowerManager.__init__(self, portname)
         self.serial = serial.Serial()
@@ -93,7 +137,8 @@ class NP05B(PowerManager):
 
 
 POWER_DICT= {"Generic": PowerManager, 
-            "Synaccess NP-05B": NP05B}
+            "Synaccess NP-05B (http)": NP05B_http,
+            "Synaccess NP-05B (serial)": NP05B_serial}
 
 def create_powermanager(name, port):
     return POWER_DICT[name](port)
