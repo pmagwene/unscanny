@@ -1,0 +1,5 @@
+scanner:
+  mode: Gray
+  depth: 8
+  resolution: 75
+  source: Flatbed

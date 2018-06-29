@@ -1,38 +1,39 @@
 import sys, time
+import subprocess
 import argparse
 
-import sane
 from gooey import Gooey
 
 
-
-def get_scanners():
-    sane.init()
-    devices = sane.get_devices(True)
-    names = [dev[0] for dev in devices] + ["test"]
-    return names
 
 
 @Gooey
 def main():
 
-    scanners = get_scanners()
-    
+
     parser = argparse.ArgumentParser(description="Time series imaging with flatbed scanners.")
     
-    parser.add_argument('--scanner', type=str, choices = scanners,
-            help="Scanner to use")  
-    parser.add_argument('--delay', type=int, default = 0,
-            help="Delay (in mins) before first scan")  
+    parser.add_argument('scansettings', type=argparse.FileType('r'),
+                        help="TOML formatted file with scanner settings")  
+    parser.add_argument('powersettings', type=argparse.FileType('r'),
+                        help="TOML formatted file with power settings")  
+
+    parser.add_argument("--powercmd", type=str, default = "np05b.py",
+                        help = "Program to control power manager")
+    parser.add_argument("--scancmd", type = str, default = "scanit.py",
+                        help = "Program to run scanner")
 
 
- 
+    parser.add_argument('--delay', type=int, default = 5,
+                        help="Delay (in mins) before first scan")  
+    parser.add_argument("--interval", type=int, default = 30,
+                        help="Interval (in mins) between scans")
+    parser.add_argument('--nscans', type=int, default = 1,
+                        help = "Number of scans to collect")
+
 
     args = parser.parse_args()
 
-    print "next scan in two minutes..."
-    time.sleep(10)
-    print "next scan in three minutes..."
 
 
 

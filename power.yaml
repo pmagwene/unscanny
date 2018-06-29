@@ -1,0 +1,6 @@
+power:
+  model: Generic
+  off_delay: 60
+  on_delay: 60
+  outlet: 1
+  port: /dev/cu.Bluetooth-Incoming-Port

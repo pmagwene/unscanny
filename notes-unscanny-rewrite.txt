@@ -1,0 +1,48 @@
+
+
+    
+
+
+run data:
+    start time
+    first scan time
+    last scan time
+    next scan time
+    number of scans
+    base filename
+
+    power manager port
+    power manager outlet
+    power manager 
+
+    scanner device name
+
+
+
+power manager:
+    port number (IP address)
+    outlet number
+
+
+
+setup:
+    read config files
+    confirm config
+    choose scanner
+
+
+core scanning:
+    power on scanner
+    warm up scanner
+    scan image
+    cooldown
+    power off scanner
+
+
+countdown loop:
+    draw screen
+    count down to first scan
+
+scanner loop:
+    draw screen
+    update status line
