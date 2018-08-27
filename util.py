@@ -14,6 +14,7 @@ def quick_scan(settings = {}, test = False):
     # init and find devices
     sane.init()
     devices = sane.get_devices(localOnly = True)
+    print(devices)
 
     if test:
         devices = [("test", "SANE", "SANE", "SANE")]

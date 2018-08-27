@@ -33,6 +33,7 @@ def scan(scansettings, rundata, test = False):
     if test:
       img = quick_scan({},test=True)
     else:
+      print(dataclasses.asdict(scansettings))
       img = quick_scan(dataclasses.asdict(scansettings))
     TIFF.imsave(rundata.current_fname() + ".tiff", img)
     click.echo("Scan completed at: {}".format(rundata.t_lastscan.strftime("%H:%M:%S")))
