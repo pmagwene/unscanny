@@ -23,7 +23,7 @@ def centered_ycoord(win, s):
         nlines = len(str(s).splitlines())
     return (nrows // 2) - (nlines // 2)
     
-def adjust_lines(s, func=string.ljust):
+def adjust_lines(s, func=str.ljust):
     maxlen = max_line_len(s)
     adj_lines = [func(i, maxlen) for i in s.splitlines()]
     return "\n".join(adj_lines)

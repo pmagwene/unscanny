@@ -1,7 +1,7 @@
 from dataclasses import dataclass, fields
 
 import sarge
-import tifffile as TIFF
+#import tifffile as TIFF
 
 
 @dataclass

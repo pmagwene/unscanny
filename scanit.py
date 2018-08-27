@@ -48,6 +48,7 @@ def quick_scan(settings = {}, test = False):
 
 
 
+
 @click.command()
 @click.option("--test/--no-test", default=False, show_default = True,
               help = "Use 'test' scanner backend.")
