@@ -98,9 +98,9 @@ def all_settings(run, scan, power):
               default = 300)
 @click.option("-b", "--bit-depth",
               help = "Bit depth per pixel",
-              type=click.Choice(["8", "16"]),
+              type=click.Choice(([8,16])),
               prompt = True,
-              default="16")
+              default=16)
 @click.option("--powermodule",
               help = "Module name of power manager",
               type = str,
