@@ -1,6 +1,8 @@
 import sys
 import time, datetime
 import threading, sched
+import dataclasses
+
 
 import click
 
@@ -22,13 +24,16 @@ def power_off(powersettings):
     mgr = mod.__dict__[p.module](p.address, p.username, p.password)
     mgr.power_off(p.outlet)    
 
-def scan(scansettings, rundata):
+def scan(scansettings, rundata, test = False):
     click.echo("Scanning...")
     rundata.nscans_completed += 1
     rundata.t_lastscan = datetime.datetime.now()
     if rundata.t_start is None:
         rundata.t_start =  rundata.t_lastscan 
-    img = quick_scan({},test=True)
+    if test:
+      img = quick_scan({},test=True)
+    else:
+      img = quick_scan(dataclasses.asdict(scansettings))
     TIFF.imsave(rundata.current_fname() + ".tiff", img)
     click.echo("Scan completed at: {}".format(rundata.t_lastscan.strftime("%H:%M:%S")))
     click.echo("File saved as: {}".format(rundata.current_fname() + ".tiff"))
@@ -160,6 +165,7 @@ def cli(user, experiment, interval, nscans, delay,
         click.echo()
         click.echo("\nCycle {}".format(i+1))
         power_on(power)
+        time.sleep(30)  # allow scanner to complete its boot cycle
         scan(scanner, rundata)
         power_off(power) 
         click.echo()

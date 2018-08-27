@@ -130,7 +130,7 @@ class RunData(object):
         """ Appropriate filename for current stage of run.
         """
         if timept is None:
-            timept = datetime.datetime.now()
+            timept = self.t_lastscan
         timestr = timept.strftime("%Y%m%dT%H%M%S")
         return "{}-{:04d}-{}".format(self.base_fname(),
                                      self.nscans_completed,
