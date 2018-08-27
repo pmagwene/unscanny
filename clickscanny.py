@@ -33,7 +33,6 @@ def scan(scansettings, rundata, test = False):
     if test:
       img = quick_scan({},test=True)
     else:
-      print(dataclasses.asdict(scansettings))
       img = quick_scan(dataclasses.asdict(scansettings))
     TIFF.imsave(rundata.current_fname() + ".tiff", img)
     click.echo("Scan completed at: {}".format(rundata.t_lastscan.strftime("%H:%M:%S")))
@@ -168,6 +167,7 @@ def cli(user, experiment, interval, nscans, delay,
         power_on(power)
         time.sleep(30)  # allow scanner to complete its boot cycle
         scan(scanner, rundata)
+        time.sleep(30)  # allow scanner to reset
         power_off(power) 
         click.echo()
 
