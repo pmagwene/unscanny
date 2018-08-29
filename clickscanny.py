@@ -6,7 +6,8 @@ import dataclasses
 
 import click
 
-from util import (HHMMSS, RunSettings, ScannerSettings, PowerSettings, RunData, quick_scan)
+from util import (HHMMSS, RunSettings, ScannerSettings, PowerSettings, RunData)
+import unsane
 import tifffile as TIFF
 
 
@@ -97,7 +98,7 @@ def all_settings(run, scan, power):
               default = 300)
 @click.option("-b", "--bit-depth",
               help = "Bit depth per pixel",
-              type=click.Choice(([8,16])),
+              type=click.IntRange(1,16),
               prompt = True,
               default=16)
 @click.option("--powermodule",

@@ -1,0 +1,20 @@
+[run]
+  user = "Magwene"
+  experiment = "Yeast100"
+  interval = 30
+  nscans = 144
+
+[scanner]
+  mode = "Gray"
+  depth = 16
+  resolution = 300
+  source = "TPU8x10"
+  threshold-curve = "auto"
+
+[power]
+  module = "np05"
+  address = "192.168.1.100"
+  user = "admin"
+  password = "admin"
+  outlet = 1
+
