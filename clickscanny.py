@@ -76,7 +76,7 @@ def cli(settings_file, delay, test):
 
     run = RunSettings.fromdict(settings["run"])
     run.delay = delay
-    scanner = ScannerSettings(settings["power"])
+    scanner = ScannerSettings(settings["scanner"])
     power = PowerSettings.fromdict(settings["power"])
 
     rundata = RunData(run, scanner, power)
