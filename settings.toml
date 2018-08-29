@@ -9,7 +9,6 @@
   depth = 16
   resolution = 300
   source = "TPU8x10"
-  threshold-curve = "auto"
 
 [power]
   module = "np05"
