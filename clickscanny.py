@@ -3,12 +3,12 @@ import time, datetime
 import threading, sched
 import dataclasses
 
-
 import click
+import toml
+import tifffile as TIFF
 
 from util import (HHMMSS, RunSettings, ScannerSettings, PowerSettings, RunData)
 import unsane
-import tifffile as TIFF
 
 
 def power_on(powersettings):
@@ -32,9 +32,10 @@ def scan(scansettings, rundata, test = False):
     if rundata.t_start is None:
         rundata.t_start =  rundata.t_lastscan 
     if test:
-      img = quick_scan({},test=True)
+        img = unsane.scan("test", unsane.test_settings)
     else:
-      img = quick_scan(dataclasses.asdict(scansettings))
+        devs = unsane.get_scanners()
+        img = unsane.scan(devs[0], scansettings.settings)
     TIFF.imsave(rundata.current_fname() + ".tiff", img)
     click.echo("Scan completed at: {}".format(rundata.t_lastscan.strftime("%H:%M:%S")))
     click.echo("File saved as: {}".format(rundata.current_fname() + ".tiff"))
@@ -58,83 +59,25 @@ def all_settings(run, scan, power):
 
 
 @click.command()
-@click.option("-u", "--user",
-              help = "Last name of investigator",
-              type = str,
-              prompt = True)
-@click.option("-e", "--experiment",
-              help = "Name of experiment",
-              type = str,
-              prompt = True)
-@click.option("-i", "--interval",
-              help = "Interval between scans (mins)",
-              type = click.IntRange(1, 2880),
-              prompt = True,
-              default = 30)
-@click.option("-n", "--nscans",
-              help = "Total number of scans",
-              type=click.IntRange(0, 9999),
-              prompt = True,
-              default=1)
 @click.option("-d", "--delay",
               help = "Delay before first scan (mins)",
               type=click.IntRange(0, 9999),
               prompt = True,
               default=0)
-@click.option("-m", "--mode",
-              help = 'Scan mode',
-              type = click.Choice(["Gray","Color"]),
-              prompt = True,
-              default = "Gray")
-@click.option("-s", "--source",
-              help = 'Scan source',
-              type = click.Choice(["TPU8x10", "Flatbed"]),
-              prompt = True,
-              default = "TPU8x10")
-@click.option("-r", "--resolution",
-              help = "Scanner resolution (dpi)",
-              type = int,
-              prompt = True,
-              default = 300)
-@click.option("-b", "--bit-depth",
-              help = "Bit depth per pixel",
-              type=click.IntRange(1,16),
-              prompt = True,
-              default=16)
-@click.option("--powermodule",
-              help = "Module name of power manager",
-              type = str,
-              prompt = True,
-              default = "nullpower")
-@click.option("--powerip",
-              help = "IP address of power manager",
-              type = str,
-              prompt = True,
-              default = "192.168.1.100")
-@click.option("--poweruser",
-              help = "Username for power manager",
-              type = str,
-              prompt = True,
-              default = "admin")
-@click.option("--powerpass",
-              help = "Password of power manager",
-              type = str,
-              prompt = True,
-              default = "admin")
-@click.option("--outlet",
-              help = "Outlet # of power manager",
-              type=click.IntRange(1, 16),
-              prompt = True,
-              default = 1)
-def cli(user, experiment, interval, nscans, delay,
-                       mode, source, resolution, bit_depth,
-                       powermodule, powerip, poweruser, powerpass, outlet):
-    run = RunSettings(user = user, experiment = experiment,
-                     interval = interval, nscans = nscans, delay = delay)
-    scanner = ScannerSettings(mode = mode, source = source, resolution = resolution,
-                         depth = bit_depth)
-    power = PowerSettings(module = powermodule, address = powerip, 
-                       username = poweruser, password = powerpass, outlet = outlet)
+@click.option("--test/", 
+              is_flag = True,
+              help = "Whether to use scanimage test scanner",
+              prompt = False,
+              default = False)
+@click.argument("settings_file", 
+                type = click.Path(exists=True, dir_okay=False))
+def cli(settings_file, delay, test):
+    settings = toml.load(settings_file)
+
+    run = RunSettings.fromdict(settings["run"])
+    run.delay = delay
+    scanner = ScannerSettings(settings["power"])
+    power = PowerSettings.fromdict(settings["power"])
 
     rundata = RunData(run, scanner, power)
 
@@ -167,7 +110,7 @@ def cli(user, experiment, interval, nscans, delay,
         click.echo("\nCycle {}".format(i+1))
         power_on(power)
         time.sleep(30)  # allow scanner to complete its boot cycle
-        scan(scanner, rundata)
+        scan(scanner, rundata, test = test)
         time.sleep(30)  # allow scanner to reset
         power_off(power) 
         click.echo()

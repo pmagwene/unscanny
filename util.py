@@ -79,14 +79,22 @@ class RunSettings(Settings):
     experiment: str
     interval: int
     nscans: int
-    delay: int
+    delay: int = 0
+
+    @staticmethod
+    def fromdict(d):
+        return RunSettings(user = d["user"], experiment = d["experiment"],
+                           interval = d["interval"], nscans = d["nscans"])
 
 @dataclass
 class ScannerSettings(Settings):
-    mode: str
-    source: str
-    resolution: int
-    depth: int
+    settings: dict
+
+    def __str__(self):
+        s = ""
+        for (key, val) in self.settings.items():
+            s += "{} = {}\n".format(key, val)
+        return s
 
 @dataclass
 class PowerSettings(Settings):
@@ -95,6 +103,14 @@ class PowerSettings(Settings):
     username: str
     password: str
     outlet: int
+
+    @staticmethod
+    def fromdict(d):
+        return PowerSettings(module = d["module"], address = d["address"],
+                             username = d["user"], password = d["password"],
+                             outlet = d["outlet"])
+
+
 
 class RunData(object):
     """ A class to represent information associated with a run.
