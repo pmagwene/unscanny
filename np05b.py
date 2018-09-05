@@ -3,6 +3,7 @@
 
 import click
 import requests
+import sys
 
 
 class NP05B_http(object):

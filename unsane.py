@@ -1,4 +1,3 @@
-from dataclasses import dataclass, fields
 import io
 
 import sarge
@@ -10,7 +9,6 @@ test_settings = {"format":"tiff",
                  "test-picture":"Color pattern",
                  "resolution":300,
                  "depth":16}
-
 
 def get_scanners():
     scanners = str(sarge.get_stdout("scanimage -f '%d%n'")).splitlines()
@@ -24,7 +22,6 @@ def settings2options(settingsdict):
 
 def build_commandline(scanner, settings) -> str:
     return "scanimage -d {} {} ".format(scanner, settings2options(settings))
-
 
 def scan(device, settings):
     command = build_commandline(device, settings)

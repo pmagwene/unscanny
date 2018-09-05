@@ -1,7 +1,6 @@
 import sys
 import time, datetime
 import threading, sched
-import dataclasses
 
 import click
 import toml
