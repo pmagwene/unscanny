@@ -5,41 +5,6 @@ from string import Formatter
 import dataclasses
 from dataclasses import dataclass
 
-import sane
-
-
-def quick_scan(settings = {}, test = False):
-    """Make scan using first scanning device found by SANE driver.
-    """
-    # init and find devices
-    sane.init()
-    devices = sane.get_devices(localOnly = True)
-
-    if test:
-        devices = [("test", "SANE", "SANE", "SANE")]
-        settings["source"]= "Flatbed"
-        settings["test_picture"] = "Color pattern"
-        settings["mode"] = "Color"
-        settings["resolution"] = 75
-        settings["depth"] = 8
-
-    if not len(devices):
-        return None
-    dev_name = devices[0][0]
-
-    # open scanner
-    scanner = sane.open(dev_name)
-
-    # set options
-    if "mode" in settings:
-        scanner.mode = settings["mode"]
-    for (key, value) in settings.items():
-        setattr(scanner, key, value)
-
-    img = scanner.arr_scan()
-    scanner.close()
-    sane.exit()
-    return img    
 
 
 def strfdelta(tdelta, fmt):
