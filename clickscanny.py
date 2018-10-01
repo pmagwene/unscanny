@@ -72,7 +72,7 @@ def all_settings(run, scan, power):
               prompt = False,
               default = False)
 @click.option("-r", "--maxretries",
-              type = click.IntRange(0, 5)
+              type = click.IntRange(0, 5),
               prompt = False,
               default = 3)
 @click.argument("settings_file", 
