@@ -16,6 +16,8 @@ def power_on(powersettings):
     p = powersettings
     mod = __import__(p.module)
     mgr = mod.__dict__[p.module](p.address, p.username, p.password)
+    mgr.wake_up()
+    time.sleep(1)
     mgr.power_on(p.outlet)
 
 def power_off(powersettings):
@@ -23,10 +25,9 @@ def power_off(powersettings):
     p = powersettings
     mod = __import__(p.module)
     mgr = mod.__dict__[p.module](p.address, p.username, p.password)
-    mgr.wake_up()
     mgr.power_off(p.outlet)    
 
-def scan(scansettings, rundata, test = False):
+def scan(scansettings, rundata, test = False, retries=3):
     click.echo("Scanning...")
     rundata.nscans_completed += 1
     rundata.t_lastscan = datetime.datetime.now()
@@ -70,9 +71,13 @@ def all_settings(run, scan, power):
               help = "Whether to use scanimage test scanner",
               prompt = False,
               default = False)
+@click.option("-r", "--maxretries",
+              type = click.IntRange(0, 5)
+              prompt = False,
+              default = 3)
 @click.argument("settings_file", 
                 type = click.Path(exists=True, dir_okay=False))
-def cli(settings_file, delay, test):
+def cli(settings_file, delay, maxretries, test):
     settings = toml.load(settings_file)
 
     run = RunSettings.fromdict(settings["run"])
@@ -109,8 +114,19 @@ def cli(settings_file, delay, test):
             t.start()
         click.echo()
         click.echo("\nCycle {}".format(i+1))
-        power_on(power)
-        time.sleep(30)  # allow scanner to complete its boot cycle
+        retries = 0
+        while True:
+            power_on(power)
+            time.sleep(30)  # allow scanner to complete its boot cycle
+            devices = unsane.get_scanners()
+            if len(devices):
+                break
+            if retries > maxretries:
+                click.echo("No scanners found. Max retries reached.")
+                sys.exit(1)
+            retries += 1
+            click.echo("No scanners found. Resetting power...")
+            power_off(power)
         scan(scanner, rundata, test = test)
         time.sleep(30)  # allow scanner to reset
         power_off(power) 

@@ -82,13 +82,11 @@ def is_on(ctx, outlet):
     else:
         click.echo("0")
 
-@click.command()
-@click.argument("wait",
-                type = click.IntRange(0,30))
+@cli.command()
 @click.pass_context
-def wake_up(ctx, wait):
+def wake_up(ctx):
   "Send wake up signal to power manager"
-  response = ctx.obj["manager"].wake_up(wait)
+  response = ctx.obj["manager"].wake_up()
   sys.exit(response)
 
 
