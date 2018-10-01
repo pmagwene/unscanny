@@ -184,3 +184,4 @@ class RunData(object):
                  totalstr, succstr, logstr]
         reportstr = "\n\n".join(parts)
         return reportstr
+

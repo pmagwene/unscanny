@@ -10,6 +10,7 @@ from util import (HHMMSS, RunSettings, ScannerSettings, PowerSettings, RunData)
 import unsane
 
 
+
 def power_on(powersettings):
     click.echo("Powering on")
     p = powersettings
@@ -22,6 +23,7 @@ def power_off(powersettings):
     p = powersettings
     mod = __import__(p.module)
     mgr = mod.__dict__[p.module](p.address, p.username, p.password)
+    mgr.wake_up()
     mgr.power_off(p.outlet)    
 
 def scan(scansettings, rundata, test = False):

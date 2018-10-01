@@ -20,3 +20,5 @@ class nullpower(object):
     def is_on(self, outlet):
         return True
 
+    def wake_up(self, wait):
+        return 0

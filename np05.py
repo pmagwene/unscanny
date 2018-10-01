@@ -1,5 +1,7 @@
-import sys
+import sys, time
+
 import requests
+
 
 
 class np05(object):
@@ -44,5 +46,12 @@ class np05(object):
 
     def status(self):
         cmd = "$A5"
-        status_str = self._run_command(cmd).content
+        status_str = self._run_command(cmd).content.decode('utf-8')
         return [i for i in reversed([int(c) for c in status_str])]
+
+    def wake_up(self, wait = 10):
+        try:
+            requests.get(self.url)
+            return 0
+        except (requests.ConnectionError, requests.ConnectTimeout):
+            return 1
