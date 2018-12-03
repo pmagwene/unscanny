@@ -3,6 +3,7 @@
 import sys
 import time, datetime
 import threading, sched
+import re
 
 import click
 import toml
@@ -29,17 +30,19 @@ def power_off(powersettings):
     mgr = mod.__dict__[p.module](p.address, p.username, p.password)
     mgr.power_off(p.outlet)    
 
-def scan(scansettings, rundata, test = False, retries=3):
+def scan(scansettings, rundata, scannerstr, test = False, retries=3):
     click.echo("Scanning...")
     rundata.nscans_completed += 1
     rundata.t_lastscan = datetime.datetime.now()
+    scanner_re = re.compile(scannerstr, re.IGNORECASE)
     if rundata.t_start is None:
         rundata.t_start =  rundata.t_lastscan 
     if test:
         img = unsane.scan("test", unsane.test_settings)
     else:
         devs = unsane.get_scanners()
-        img = unsane.scan(devs[0], scansettings.settings)
+        matches = list(filter(scanner_re.match, devs))
+        img = unsane.scan(matches[0], scansettings.settings)
     TIFF.imsave(rundata.current_fname() + ".tiff", img)
     click.echo("Scan completed at: {}".format(rundata.t_lastscan.strftime("%H:%M:%S")))
     click.echo("File saved as: {}".format(rundata.current_fname() + ".tiff"))
@@ -77,9 +80,13 @@ def all_settings(run, scan, power):
               type = click.IntRange(0, 5),
               prompt = False,
               default = 3)
+@click.option("-s", "--scannerstr",
+        type = str,
+        help = "String to match on to identify scanner",
+        default = "epson")
 @click.argument("settings_file", 
                 type = click.Path(exists=True, dir_okay=False))
-def cli(settings_file, delay, maxretries, test):
+def cli(settings_file, delay, maxretries, scannerstr, test):
     settings = toml.load(settings_file)
 
     run = RunSettings.fromdict(settings["run"])
@@ -88,6 +95,8 @@ def cli(settings_file, delay, maxretries, test):
     power = PowerSettings.fromdict(settings["power"])
 
     rundata = RunData(run, scanner, power)
+
+    scanner_re = re.compile(scannerstr, re.IGNORECASE)
 
     # Confirm settings are correct
     click.echo("\n" + rundata.settings_str() + "\n")
@@ -121,7 +130,8 @@ def cli(settings_file, delay, maxretries, test):
             power_on(power)
             time.sleep(30)  # allow scanner to complete its boot cycle
             devices = unsane.get_scanners()
-            if len(devices):
+            matching_devices = list(filter(scanner_re.match, devices))
+            if len(matching_devices):
                 break
             if retries > maxretries:
                 click.echo("No scanners found. Max retries reached.")
@@ -129,7 +139,7 @@ def cli(settings_file, delay, maxretries, test):
             retries += 1
             click.echo("No scanners found. Resetting power...")
             power_off(power)
-        scan(scanner, rundata, test = test)
+        scan(scanner, rundata, scannerstr, test = test)
         time.sleep(30)  # allow scanner to reset
         power_off(power) 
         click.echo()

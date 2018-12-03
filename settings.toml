@@ -1,8 +1,8 @@
 [run]
   user = "Magwene"
   experiment = "Yeast100"
-  interval = 30
-  nscans = 144
+  interval = 60
+  nscans = 72
 
 [scanner]
   mode = "Gray"

@@ -16,7 +16,7 @@ class np05(object):
         fullurl = "{}{} {}".format(self.url, cmd, argstr)
         try:
             r = requests.post(fullurl, auth=(self.username, self.password), timeout=10)
-        except (requests.ConnectTimeout, requests.ConeectionError):
+        except (requests.ConnectTimeout, requests.ConnectionError):
             print("ERROR: Unable to connect to NP05b power manager.")
             sys.exit(1)
         return r
